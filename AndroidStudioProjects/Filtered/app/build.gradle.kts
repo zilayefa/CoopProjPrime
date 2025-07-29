@@ -40,6 +40,15 @@ android {
 }
 
 dependencies {
+    // Retrofit
+    implementation (libs.retrofit.v271)
+// OkHttp
+    implementation(libs.okhttp.v500alpha2)
+// JSON Converter
+    implementation (libs.converter.gson.v271)
+
+// AsyncImage
+    implementation(libs.coil.compose.v200rc03)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -17,21 +17,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.frontendmasters.filtered.pages.InfoPage
+import com.frontendmasters.filtered.pages.MenuPage
 import com.frontendmasters.filtered.pages.OffersPage
+import com.frontendmasters.filtered.pages.OrderPage
 import com.frontendmasters.filtered.ui.theme.FilteredTheme
 import com.frontendmasters.filtered.ui.theme.Primary
 
-@Preview
-@Composable
-fun App_Preview(){
-    FilteredTheme() {
-        App()
-    }
-}
+//@Preview
+//@Composable
+//fun App_Preview(){
+//    FilteredTheme() {
+//        App()
+//    }
+//}
 
 
 @Composable
-fun App() {
+fun App(dataManager: DataManager) {
 
     val selectedRoute = remember {
         mutableStateOf(Routes.MenuPage.route)
@@ -50,10 +53,10 @@ fun App() {
 
         content = { innerPadding ->
             when (selectedRoute.value) {
-                Routes.MenuPage.route -> Text("Menu")
+                Routes.MenuPage.route -> MenuPage(dataManager)
                 Routes.OffersPage.route -> OffersPage(innerPadding)
-                Routes.OrderPage.route -> Text("Orders")
-                Routes.InfoPage.route -> Text("Info")
+                Routes.OrderPage.route -> OrderPage(dataManager)
+                Routes.InfoPage.route -> InfoPage()
             }
             //OffersPage(innerPadding)
         },
