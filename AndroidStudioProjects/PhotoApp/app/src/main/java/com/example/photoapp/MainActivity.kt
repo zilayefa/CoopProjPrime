@@ -1,13 +1,14 @@
 package com.example.photoapp
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
@@ -19,55 +20,62 @@ import androidx.navigation.compose.rememberNavController
 import com.example.photoapp.pages.FrontPage
 import com.example.photoapp.pages.GalleryPage
 import com.example.photoapp.ui.theme.PhotoAppTheme
-import android.Manifest
-
 
 class MainActivity : ComponentActivity() {
-    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter") // Ignore Scaffold padding warning
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Enables content to draw behind system bars for edge-to-edge layout
         enableEdgeToEdge()
 
         setContent {
-            PhotoAppTheme {
-                val navController = rememberNavController()
-                val context = this
+            PhotoAppTheme { // Apply your custom app theme
+                val navController = rememberNavController() // Controls screen navigation
+                val context = this // Store reference to current Activity context
 
-                // --- Runtime permission launcher ---
+                // Launcher to request storage permission at runtime
                 val storagePermissionLauncher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestPermission()
                 ) { isGranted ->
                     if (!isGranted) {
+                        // Show a message if user denies the permission
                         Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
                     }
                 }
 
-                // --- Ask for permission on launch ---
+                // Request permission when the app is first launched
                 LaunchedEffect(Unit) {
                     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        Manifest.permission.READ_MEDIA_IMAGES
+                        Manifest.permission.READ_MEDIA_IMAGES // Android 13+
                     } else {
-                        Manifest.permission.READ_EXTERNAL_STORAGE
+                        Manifest.permission.READ_EXTERNAL_STORAGE // Older Android versions
                     }
 
+                    // Launch permission request
                     storagePermissionLauncher.launch(permission)
                 }
 
-                // --- Main UI with navigation ---
+                // Main screen layout
                 Scaffold(modifier = Modifier.fillMaxSize()) {
+                    // Navigation setup: defines screen routes
                     NavHost(
                         navController = navController,
-                        startDestination = "front"
+                        startDestination = "front" // First screen to show
                     ) {
+                        // Route for the front (home) screen
                         composable("front") {
                             FrontPage(
-                                onOpenClick = { navController.navigate("gallery") }
+                                onOpenClick = {
+                                    navController.navigate("gallery") // Navigate to gallery
+                                }
                             )
                         }
 
+                        // Route for the media gallery screen
                         composable("gallery") {
-                            GalleryPage(navController)
+                            GalleryPage(navController) // Displays photos/videos
                         }
                     }
                 }

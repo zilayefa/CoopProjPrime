@@ -3,17 +3,7 @@ package com.example.photoapp.pages
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,68 +21,76 @@ import com.example.photoapp.R
 import com.example.photoapp.ui.theme.Blue
 import com.example.photoapp.ui.theme.White
 
+/**
+ * Preview function used for Android Studio’s Preview pane.
+ * Helps developers visualize the layout of FrontPage without launching the app.
+ */
 @Preview
 @Composable
 fun FrontPage_Preview() {
-    // Preview function to visualize the UI in Android Studio's preview window
-    FrontPage(onOpenClick = {})
+    FrontPage(onOpenClick = {}) // Pass an empty lambda for preview
 }
 
+/**
+ * This composable represents the main front screen of the app.
+ * It shows a title, logo, and an OPEN button that navigates to the gallery.
+ *
+ * @param onOpenClick Callback executed when the OPEN button is clicked (navigation logic is passed from MainActivity)
+ */
 @Composable
 fun FrontPage(onOpenClick: () -> Unit) {
-    // Top-level container using Box to center the content
+
+    // Root container with centered alignment and white background
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(White), // Background color of the screen
+            .background(White), // White background (custom color from theme)
         contentAlignment = Alignment.Center
     ) {
-        // Main vertical layout
+
+        // Vertical column layout to arrange title, image, and button
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally, // Center items horizontally
-            verticalArrangement = Arrangement.Center, // Center items vertically
+            horizontalAlignment = Alignment.CenterHorizontally, // Center elements horizontally
+            verticalArrangement = Arrangement.Center, // Center elements vertically in the screen
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp) // Outer padding
+                .padding(32.dp) // Add padding around the screen
         ) {
 
-            // Title text "photos"
+            // App title text
             Text(
-                text = "photos",
-                color = Blue, // Make sure Blue is defined, e.g., Color(0xFF1A73E8)
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Medium
+                text = "photos", // Title
+                color = Blue, // Title color (custom blue from theme)
+                fontSize = 40.sp, // Large text size
+                fontWeight = FontWeight.Medium // Medium weight
             )
 
-            // Spacer to separate title from logo
-            Spacer(modifier = Modifier.height(140.dp))
+            Spacer(modifier = Modifier.height(140.dp)) // Space between title and image
 
-            // Image (Logo) in the center
+            // Center logo image
             Image(
-                painter = painterResource(id = R.drawable.photologo), // Replace with your logo resource
+                painter = painterResource(id = R.drawable.photologo), // Your logo resource
                 contentDescription = "Photo Logo",
-                modifier = Modifier.size(160.dp)
+                modifier = Modifier.size(160.dp) // Square image size
             )
 
-            // Spacer to separate logo from the button
-            Spacer(modifier = Modifier.height(140.dp))
+            Spacer(modifier = Modifier.height(140.dp)) // Space between image and button
 
-            // OPEN Button
+            // OPEN button to go to the gallery
             Button(
-                onClick = onOpenClick, // Executes callback when clicked (e.g., navigate to Gallery)
+                onClick = onOpenClick, // Navigate to gallery when clicked
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White, // White background
-                    contentColor = Color.Black // Black text
+                    containerColor = Color.White, // White background for button
+                    contentColor = Color.Black // Black text color
                 ),
-                border = BorderStroke(4.dp, Color.Black), // Bold border
-                shape = RoundedCornerShape(6.dp), // Rounded edges
+                border = BorderStroke(4.dp, Color.Black), // Bold black border
+                shape = RoundedCornerShape(6.dp), // Slightly rounded corners
                 modifier = Modifier
-                    .height(48.dp)
-                    .width(150.dp)
+                    .height(48.dp) // Height of the button
+                    .width(150.dp)  // Width of the button
             ) {
-                // Text inside the button
                 Text(
-                    text = "OPEN",
+                    text = "OPEN", // Button label
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Bold
                 )
