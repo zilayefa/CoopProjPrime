@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -284,7 +285,7 @@ fun VideoThumbnail(uri: Uri) {
             tint = Color.White,
             modifier = Modifier
                 .align(Alignment.Center) // Center the icon within the Box
-                .size(48.dp) // Icon size
+                .size(90.dp) // Icon size
         )
     }
 }
@@ -392,7 +393,8 @@ fun BottomBar(onHomeClick: () -> Unit, onShareClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth() // Stretch across the screen
             .background(Color.White) // White background for bar
-            .padding(vertical = 10.dp, horizontal = 24.dp), // Inner padding
+            .padding(vertical = 10.dp, horizontal = 24.dp) // Inner padding
+            .navigationBarsPadding(), // automatic bottom padding for nav bar
         horizontalArrangement = Arrangement.SpaceBetween, // Items at left and right
         verticalAlignment = Alignment.CenterVertically // Center icons/text vertically
     ) {
