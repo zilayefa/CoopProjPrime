@@ -11,6 +11,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import android.widget.VideoView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,13 +23,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
@@ -54,8 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.runtime.*
-
-
+import androidx.compose.ui.viewinterop.AndroidView
 
 
 @Composable
@@ -81,10 +85,13 @@ fun GalleryPage(navController: NavController) {
 
     // If an image is selected for preview, show it full-screen and hide the gallery UI
     if (previewUri.value != null) {
-        ImagePreviewScreen(
-            uri = previewUri.value!!,
-            onBack = { previewUri.value = null } // Tapping will exit the preview and return to gallery
-        )
+
+        if (mediaList.find { it.first == previewUri.value }?.second == "video") {
+            VideoPreviewScreen(uri = previewUri.value!!, onBack = { previewUri.value = null })
+        } else {
+            ImagePreviewScreen(uri = previewUri.value!!, onBack = { previewUri.value = null })
+        }
+
     } else {
         // Main Gallery UI wrapped in a Scaffold, allowing us to add a bottom bar
         Scaffold(
@@ -179,12 +186,7 @@ fun GalleryPage(navController: NavController) {
                                             // If it's an image, open it in full-screen preview
                                             previewUri.value = uri
                                         } else {
-                                            // If it's a video, launch external video player
-                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(uri, "video/*")
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            context.startActivity(intent)
+                                            previewUri.value = uri
                                         }
                                     }
                                 }
@@ -218,6 +220,122 @@ fun GalleryPage(navController: NavController) {
             }
         }
     }
+}
+
+@Composable
+fun VideoPreviewScreen(uri: Uri, onBack: () -> Unit) {
+    val context = LocalContext.current
+
+    // Get the file name (e.g., video.mp4)
+    val videoName = remember(uri) {
+        getFileNameFromUri(context, uri)
+    }
+
+    // Track playback state
+    var isPlaying by remember { mutableStateOf(true) }
+
+    // Full-screen container
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Main vertical layout
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 🔙 Back Button at top-left
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clickable { onBack() }
+                )
+            }
+
+            // 🎬 Full-width Video View (just like image layout)
+            AndroidView(
+                factory = { ctx ->
+                    VideoView(ctx).apply {
+                        setVideoURI(uri)
+                        setOnPreparedListener {
+                            if (isPlaying) start()
+                        }
+                        setOnCompletionListener {
+                            isPlaying = false
+                        }
+                    }
+
+                },
+                update = { videoView ->
+                    if (isPlaying) videoView.start() else videoView.pause()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(550.dp)
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+
+            // ⏯️ Play/Pause Button
+            Button(
+                onClick = { isPlaying = !isPlaying },
+                modifier = Modifier
+                    .padding(top = 16.dp)
+            ) {
+                Text(if (isPlaying) "Pause" else "Play")
+            }
+
+            // 🏷️ Video File Name
+            Text(
+                text = videoName,
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .padding(top = 8.dp, bottom = 24.dp)
+            )
+        }
+    }
+}
+
+// This function returns the display name (file name including extension, e.g. "video.mp4")
+// from a content Uri using Android's ContentResolver.
+fun getFileNameFromUri(context: Context, uri: Uri): String {
+
+    // Define the column we want to query from the media store — DISPLAY_NAME holds the filename
+    val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+
+    // Query the content resolver to get the file metadata
+    context.contentResolver.query(
+        uri,               // The content URI of the file
+        projection,        // The column(s) we want to retrieve — in this case, just DISPLAY_NAME
+        null,              // No selection clause (i.e., no filtering)
+        null,              // No selection arguments
+        null               // Default sort order
+    )?.use { cursor ->     // Auto-close the cursor after use (use block handles closing)
+
+        // Get the index of the DISPLAY_NAME column from the cursor
+        val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+
+        // Move the cursor to the first row (should be only one in this case)
+        if (cursor.moveToFirst()) {
+            // Return the actual file name from the DISPLAY_NAME column
+            return cursor.getString(nameIndex)
+        }
+    }
+
+    // Fallback: If the query fails or no result is found, return a default file name
+    return "Video"
 }
 
 // Extracts a single frame from a video URI to be used as a thumbnail bitmap
