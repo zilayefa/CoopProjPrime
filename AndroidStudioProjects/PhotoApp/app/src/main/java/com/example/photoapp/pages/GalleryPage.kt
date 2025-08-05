@@ -4,8 +4,12 @@ import android.content.ActivityNotFoundException
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,11 +48,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import androidx.compose.runtime.*
+
 
 
 
@@ -89,6 +94,8 @@ fun GalleryPage(navController: NavController) {
                         // Trigger WhatsApp sharing if any items are selected
                         if (selectedItems.isNotEmpty()) {
                             shareImagesOnWhatsApp(context, selectedItems)
+                        }else{
+                            Log.e("GalleryPage", "Share button clicked with no selected items")
                         }
                     }
                 )
@@ -119,11 +126,14 @@ fun GalleryPage(navController: NavController) {
                     // Button toggles selection mode (for multi-select/sharing)
                     Button(
                         onClick = {
+                            if (selectionMode.value) {
+                                // If cancelling, clear selected items too
+                                selectedItems.clear()
+                            }
                             selectionMode.value = !selectionMode.value
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
                     ) {
-                        // Text changes depending on whether selection mode is active
                         Text(if (selectionMode.value) "Cancel" else "Select")
                     }
                 }
@@ -155,6 +165,7 @@ fun GalleryPage(navController: NavController) {
                                 .aspectRatio(1f) // Keep square shape
                                 .clip(RoundedCornerShape(8.dp)) // Rounded corners
                                 .clickable {
+                                    Log.e("GalleryPage", "Media clicked: type=$type, uri=$uri")
                                     if (selectionMode.value) {
                                         // If selection mode is on, toggle the selected state
                                         if (selectedItems.contains(uri)) {
@@ -185,21 +196,8 @@ fun GalleryPage(navController: NavController) {
                                     contentScale = ContentScale.Crop, // Fill tile while preserving crop
                                     modifier = Modifier.fillMaxSize()
                                 )
-                            } else {
-                                // Placeholder for video: black background with play icon
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color.Black),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Video",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(48.dp)
-                                    )
-                                }
+                            }else if (type == "video") {
+                                VideoThumbnail(uri)
                             }
 
                             // If item is selected, draw a white check icon in top-right
@@ -221,49 +219,122 @@ fun GalleryPage(navController: NavController) {
     }
 }
 
+// Extracts a single frame from a video URI to be used as a thumbnail bitmap
+fun getVideoThumbnail(context: Context, uri: Uri): Bitmap? {
+    return try {
+        // Create an instance of MediaMetadataRetriever — used to fetch media metadata or frames
+        val retriever = MediaMetadataRetriever()
+
+        // Set the data source using the provided video URI
+        retriever.setDataSource(context, uri)
+
+        // Extract a frame at 1 second (1000000 microseconds = 1 second)
+        val bitmap = retriever.getFrameAtTime(1000000)
+
+        // Always release the retriever to free resources
+        retriever.release()
+
+        // Return the extracted frame as a Bitmap (nullable)
+        bitmap
+    } catch (e: Exception) {
+        // If there's any issue (e.g., file not found, corrupt video), log the error and return null
+        e.printStackTrace()
+        null
+    }
+}
+
+@Composable
+fun VideoThumbnail(uri: Uri) {
+    // Get the current context needed to load the thumbnail from the URI
+    val context = LocalContext.current
+
+    // Store the thumbnail bitmap in a state variable so Compose can reactively recompose when it's loaded
+    var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
+
+    // Load the thumbnail when the composable first appears or when the URI changes
+    LaunchedEffect(uri) {
+        // Extract the thumbnail from the video using our helper function
+        thumbnail = getVideoThumbnail(context, uri)
+    }
+
+    // Outer Box holds the video thumbnail and overlays the Play icon
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // If the thumbnail has been successfully retrieved
+        if (thumbnail != null) {
+            Image(
+                bitmap = thumbnail!!.asImageBitmap(), // Convert Bitmap to Compose ImageBitmap
+                contentDescription = null, // No screen reader description needed for thumbnails
+                modifier = Modifier.fillMaxSize(), // Fill the grid tile
+                contentScale = ContentScale.Crop // Crop to fill the box while maintaining aspect ratio
+            )
+        } else {
+            // If thumbnail is still loading or failed, show a black background placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            )
+        }
+
+        // Overlay a white play icon in the center of the thumbnail to indicate it's a video
+        Icon(
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = "Video", // Accessibility label for screen readers
+            tint = Color.White,
+            modifier = Modifier
+                .align(Alignment.Center) // Center the icon within the Box
+                .size(48.dp) // Icon size
+        )
+    }
+}
+
+// Loads both image and video URIs from the device's external storage using MediaStore
 fun loadMediaFromGallery(context: Context): List<Pair<Uri, String>> {
-    // This list will store pairs of (URI, "image"/"video") for each media file found
+    // Create a mutable list to hold the result as pairs of (URI, type)
     val mediaList = mutableListOf<Pair<Uri, String>>()
 
-    // URI representing the general external media collection (includes both images and videos)
+    // Content URI that allows querying all types of media (files) from external storage
     val collection = MediaStore.Files.getContentUri("external")
 
-    // Columns we want to retrieve from the database: file ID and media type
+    // Specify the columns we want to retrieve from the media database
     val projection = arrayOf(
-        MediaStore.Files.FileColumns._ID,
-        MediaStore.Files.FileColumns.MEDIA_TYPE
+        MediaStore.Files.FileColumns._ID,            // Unique ID for the media file
+        MediaStore.Files.FileColumns.MEDIA_TYPE,     // Whether it's an image or video
+        MediaStore.Files.FileColumns.RELATIVE_PATH   // Folder path (optional, useful for filtering)
     )
 
-    // SQL WHERE clause to filter for images OR videos
+    // SQL-like WHERE clause: only return images or videos
     val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE}=? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE}=?"
-
-    // Values to plug into the selection query — looking for images and videos
     val selectionArgs = arrayOf(
         MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
         MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
     )
 
-    // Sort the results by most recently added first
+    // Sort results in descending order of date added — most recent first
     val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
 
-    // Perform the actual query
+    // Execute the query on the content resolver using the specified parameters
     context.contentResolver.query(
         collection,
         projection,
         selection,
         selectionArgs,
         sortOrder
-    )?.use { cursor ->
-        // Get column indexes for ID and type so we can extract data efficiently
+    )?.use { cursor -> // Use the cursor and auto-close it
+
+        // Get the indices of the columns in the result set
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
         val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.RELATIVE_PATH)
 
-        // Loop through all rows returned by the query
+        // Iterate over each row in the result set
         while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn) // Unique ID of the media file
-            val type = cursor.getInt(typeColumn) // Type: image or video
+            val id = cursor.getLong(idColumn)           // Media file ID
+            val type = cursor.getInt(typeColumn)        // Media type (image/video)
+            val path = cursor.getString(pathColumn)     // Folder path (not currently used)
 
-            // Build the content URI for the specific media type
+            // Build a URI based on the media type and ID
             val uri = when (type) {
                 MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE ->
                     ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
@@ -271,16 +342,29 @@ fun loadMediaFromGallery(context: Context): List<Pair<Uri, String>> {
                 MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO ->
                     ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
 
-                else -> continue // Skip unsupported media types
+                else -> {
+                    // Skip unsupported media types (e.g., audio, documents)
+                    Log.e("MediaLoader", "Unsupported media type: $type for ID: $id")
+                    continue
+                }
             }
 
-            // Store URI along with its type as a pair
+            // Convert type int to a readable string for your app logic
             val mediaType = if (type == MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE) "image" else "video"
+
+            // Add the media item to the list as a Pair of (URI, type)
             mediaList.add(uri to mediaType)
+
+            // Optional log for debugging: print the URI, type, and folder path
+            Log.e("MediaLoader", "Loaded: $uri ($mediaType) in $path")
         }
     }
 
-    return mediaList // Return the complete list
+    // Log the total number of media items loaded
+    Log.e("MediaLoader", "TOTAL: ${mediaList.size} items loaded")
+
+    // Return the final list of image and video URIs with their type
+    return mediaList
 }
 
 fun shareImagesOnWhatsApp(context: Context, uris: List<Uri>) {
@@ -352,3 +436,5 @@ fun ImagePreviewScreen(uri: Uri, onBack: () -> Unit) {
         )
     }
 }
+
+

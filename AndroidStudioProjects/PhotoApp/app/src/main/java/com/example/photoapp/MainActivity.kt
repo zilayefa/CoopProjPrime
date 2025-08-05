@@ -35,11 +35,12 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController() // Controls screen navigation
                 val context = this // Store reference to current Activity context
 
-                // Launcher to request storage permission at runtime
+                // Launcher to request multiple storage permission at runtime
                 val storagePermissionLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestPermission()
-                ) { isGranted ->
-                    if (!isGranted) {
+                    ActivityResultContracts.RequestMultiplePermissions()
+                ) { permissions ->
+                    val deniedPermissions = permissions.filterValues { !it }
+                    if (deniedPermissions.isNotEmpty()) {
                         // Show a message if user denies the permission
                         Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
                     }
@@ -47,14 +48,18 @@ class MainActivity : ComponentActivity() {
 
                 // Request permission when the app is first launched
                 LaunchedEffect(Unit) {
-                    val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        Manifest.permission.READ_MEDIA_IMAGES // Android 13+
+                    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        // Android 13+ requires separate permissions for images and videos
+                        arrayOf(
+                            Manifest.permission.READ_MEDIA_IMAGES,
+                            Manifest.permission.READ_MEDIA_VIDEO
+                        )
                     } else {
-                        Manifest.permission.READ_EXTERNAL_STORAGE // Older Android versions
+                        // Older Android versions use single permission
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
                     }
-
-                    // Launch permission request
-                    storagePermissionLauncher.launch(permission)
+                    // Launch permission request for all required permissions
+                    storagePermissionLauncher.launch(permissions)
                 }
 
                 // Main screen layout
