@@ -543,17 +543,43 @@ fun ImagePreviewScreen(uri: Uri, onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize() // Take full screen
-            .background(Color.Black) // Black background for better focus
-            .clickable { onBack() }, // Tap anywhere to exit preview
+            .background(Color.Black), // Black background for better focus
         contentAlignment = Alignment.Center // Center image in the screen
     ) {
-        // Display the selected image using Coil
-        Image(
-            painter = rememberAsyncImagePainter(uri), // Load image from URI
-            contentDescription = "Full image preview",
-            contentScale = ContentScale.Fit, // Scale the image to fit inside the screen
-            modifier = Modifier.fillMaxSize()
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            //  Back Button at top-left (just like video screen)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clickable { onBack() } // Back to gallery
+                )
+            }
+
+            //  Image Viewer (fills the remaining space)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(uri),
+                    contentDescription = "Full image preview",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+
+                )
+            }
+        }
     }
 }
 
