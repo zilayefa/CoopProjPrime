@@ -178,30 +178,24 @@ fun GalleryPage(navController: NavController) {
                                     detectTapGestures(
                                         onTap = {
                                             Log.e("GalleryPage", "Media tapped: type=$type, uri=$uri")
-                                            if (selectionMode.value) {
-                                                // If selection mode is on, toggle the selected state
-                                                if (selectedItems.contains(uri)) {
-                                                    selectedItems.remove(uri)
-                                                } else {
-                                                    selectedItems.add(uri)
-                                                }
+                                            // Always open media preview on tap, regardless of selection mode
+                                            if (type == "image") {
+                                                // If it's an image, open it in full-screen preview
+                                                previewUri.value = uri
                                             } else {
-                                                if (type == "image") {
-                                                    // If it's an image, open it in full-screen preview
-                                                    previewUri.value = uri
-                                                } else {
-                                                    previewUri.value = uri
-                                                }
+                                                previewUri.value = uri
                                             }
                                         },
                                         onLongPress = {
                                             Log.e("GalleryPage", "Media long pressed: type=$type, uri=$uri")
-                                            // Enter selection mode and select this item
+                                            // Enter selection mode if not already active
                                             if (!selectionMode.value) {
                                                 selectionMode.value = true
                                             }
-                                            // Add this item to selection if not already selected
-                                            if (!selectedItems.contains(uri)) {
+                                            // Toggle selection state on long press
+                                            if (selectedItems.contains(uri)) {
+                                                selectedItems.remove(uri)
+                                            } else {
                                                 selectedItems.add(uri)
                                             }
                                         }
