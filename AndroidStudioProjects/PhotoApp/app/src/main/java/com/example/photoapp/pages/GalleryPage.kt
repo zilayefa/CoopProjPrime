@@ -15,6 +15,7 @@ import android.widget.VideoView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -172,23 +174,38 @@ fun GalleryPage(navController: NavController) {
                                 .padding(8.dp)
                                 .aspectRatio(1f) // Keep square shape
                                 .clip(RoundedCornerShape(8.dp)) // Rounded corners
-                                .clickable {
-                                    Log.e("GalleryPage", "Media clicked: type=$type, uri=$uri")
-                                    if (selectionMode.value) {
-                                        // If selection mode is on, toggle the selected state
-                                        if (selectedItems.contains(uri)) {
-                                            selectedItems.remove(uri)
-                                        } else {
-                                            selectedItems.add(uri)
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = {
+                                            Log.e("GalleryPage", "Media tapped: type=$type, uri=$uri")
+                                            if (selectionMode.value) {
+                                                // If selection mode is on, toggle the selected state
+                                                if (selectedItems.contains(uri)) {
+                                                    selectedItems.remove(uri)
+                                                } else {
+                                                    selectedItems.add(uri)
+                                                }
+                                            } else {
+                                                if (type == "image") {
+                                                    // If it's an image, open it in full-screen preview
+                                                    previewUri.value = uri
+                                                } else {
+                                                    previewUri.value = uri
+                                                }
+                                            }
+                                        },
+                                        onLongPress = {
+                                            Log.e("GalleryPage", "Media long pressed: type=$type, uri=$uri")
+                                            // Enter selection mode and select this item
+                                            if (!selectionMode.value) {
+                                                selectionMode.value = true
+                                            }
+                                            // Add this item to selection if not already selected
+                                            if (!selectedItems.contains(uri)) {
+                                                selectedItems.add(uri)
+                                            }
                                         }
-                                    } else {
-                                        if (type == "image") {
-                                            // If it's an image, open it in full-screen preview
-                                            previewUri.value = uri
-                                        } else {
-                                            previewUri.value = uri
-                                        }
-                                    }
+                                    )
                                 }
                         ) {
                             // Renders the media thumbnail based on its type
